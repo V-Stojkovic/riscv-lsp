@@ -1,6 +1,6 @@
 import {
     createConnection, TextDocuments, ProposedFeatures, TextDocumentSyncKind, InitializeParams, InitializeResult,
-    Hover, MarkupKind, Location, Position
+    Hover, MarkupKind, Location, Position, StreamMessageReader, StreamMessageWriter
 } from 'vscode-languageserver/node';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,7 +9,18 @@ import { analyzeText } from './analyzer';
 import { ParsedLabel} from './types'
 import { CSR_REGISTERS,CSR_INSTRUCTIONS } from './constants';
 
-const connection = createConnection(ProposedFeatures.all);
+const isNodeIPC = !!(process as any).send;
+
+// VSCode extension host will use IPC
+// Neovim / standalone will use stdio
+const connection = isNodeIPC
+  ? createConnection(ProposedFeatures.all)
+  : createConnection(
+      ProposedFeatures.all,
+      new StreamMessageReader(process.stdin),
+      new StreamMessageWriter(process.stdout)
+    );
+
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 // SWE Pro-Tip: Map the labels to the specific file URI so multi-tab setups don't overwrite each other!
@@ -25,6 +36,7 @@ connection.onInitialize((params: InitializeParams) => {
     };
     return result;
 });
+
 
 documents.onDidChangeContent(change => {
     validateTextDocument(change.document);

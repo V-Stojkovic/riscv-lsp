@@ -64,3 +64,101 @@ To run the tests locally
 ```bash 
 npm run test
 ```
+
+## Neovim Setup (nvim-lspconfig / Neovim 0.11+)
+
+This LSP server can be used in Neovim via the built-in LSP client.
+
+### Requirements
+
+* Neovim **0.11+**
+* Node.js installed
+* `npm install` run in the plugin directory
+* `npm run build` (or `tsc -p tsconfig.json`) executed once
+
+---
+
+## Lazy.nvim configuration (recommended)
+
+```lua
+return {
+  "V-Stojkovic/riscv-lsp",
+
+  config = function()
+    local lsp = vim.lsp
+
+    -- Register filetypes
+    vim.filetype.add({
+      extension = {
+        s = "riscv_asm",
+        S = "riscv_asm",
+        asm = "riscv_asm",
+      },
+    })
+
+    -- Path to the language server inside lazy.nvim
+    local plugin_path = vim.fn.stdpath("data") .. "/lazy/riscv-lsp"
+    local server_path = plugin_path .. "/out/server.js"
+
+    -- Helpful warnings (non-blocking)
+    if vim.fn.filereadable(server_path) == 0 then
+      vim.notify(
+        "riscv-lsp: missing server.js. Run 'npm run build' in plugin directory.",
+        vim.log.levels.WARN
+      )
+    end
+
+    if vim.fn.isdirectory(plugin_path .. "/node_modules") == 0 then
+      vim.notify(
+        "riscv-lsp: missing dependencies. Run 'npm install' in plugin directory.",
+        vim.log.levels.WARN
+      )
+    end
+
+    -- LSP configuration
+    lsp.config("riscv_lsp", {
+      cmd = { "node", server_path },
+
+      filetypes = { "riscv_asm" },
+
+      root_markers = { ".git" },
+
+      single_file_support = true,
+    })
+
+    lsp.enable("riscv_lsp")
+  end,
+}
+```
+
+---
+
+## Filetypes supported
+
+* `.s`
+* `.S`
+* `.asm`
+
+---
+
+## Manual install (if not using lazy.nvim)
+
+```lua
+vim.lsp.config("riscv_lsp", {
+  cmd = { "node", "/path/to/riscv-lsp/out/server.js" },
+  filetypes = { "riscv_asm" },
+  root_markers = { ".git" },
+})
+
+vim.lsp.enable("riscv_lsp")
+```
+
+---
+
+## Notes
+
+* The server must be built before Neovim can start it.
+* If you change TypeScript files, re-run `npm run build`.
+* This LSP uses a simple Node-based transport (stdio).
+
+---
